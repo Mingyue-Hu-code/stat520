@@ -1,0 +1,143 @@
+---
+title: "homework4"
+author: "mingyue hu"
+date: "10/19/2022"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+
+
+###  Part 1
+#Question 1(a)
+```{r}
+mydat<-read.csv("Kids1.csv")
+y<-mydat$oxy
+plot(mydat$bm,mydat$oxy)
+oxyC<-cut(y,breaks = quantile(y,prob=c(0,seq(0.1,1,by=0.1))),include.lowest=TRUE)
+GroupMean<-tapply(y,oxyC,mean)
+GroupSD<-tapply(y, oxyC, sd)
+lm<-lm(log(GroupSD)~log(GroupMean))
+summary(lm)
+plot(log(GroupMean),log(GroupSD))
+abline(a=coef(lm)[1],b=coef(lm)[2])
+```
+Ans: The Gamma distribution is chosen for random model component.
+The Mean-Variance relationship will be checked in order to choose a random model component. The Box-Cox plot suggests that the coefficient between log(sd) and log(mean) is about 1. Therefore, the Gamma distribution with may be reasonable.
+
+#Question 3
+```{r}
+plot(mydat$bm,sqrt(mydat$oxy),xlab = "body mass",ylab = "square root of oxy")
+plot(mydat$bm,log(mydat$oxy),xlab = "body mass",ylab = "log oxy")
+```
+Ans: The log link is chosen as the link function. 
+After checking the new scatterplot, an approximate linear trend could be observed.
+
+#Question 4
+```{r}
+gammafit<-glm(mydat$oxy~mydat$bm,family = Gamma(link = "log"))
+summary(gammafit)
+
+estse <-as.vector(t(summary(gammafit)$coefficients[,c(1,2)]))
+round(estse,4)
+#scaled
+summary(gammafit)$deviance/summary(gammafit)$dispersion
+#unscaled
+summary(gammafit)$deviance
+
+intgamma <- cbind(summary(gammafit)$coefficients[,c(1)]-1.96*summary(gammafit)$coefficients[,c(2)],summary(gammafit)$coefficients[,c(1)] +1.96*summary(gammafit)$coefficients[,c(2)])
+intgamma
+
+W <- gammafit$weights
+X <- cbind(1, mydat$bm)
+Z <- sqrt(diag(W))%*%X
+H <- Z%*%solve(t(Z)%*%Z)%*%t(Z)
+dprime <- residuals(gammafit, type ="deviance")/sqrt(summary(gammafit)$dispersion)/sqrt(1-diag(H))
+plot(log(gammafit$fitted), dprime, xlab = "log (Fitted Value)", ylab = "Standardized Deviance Residual"); abline(h=0)
+
+plot(mydat$bm,mydat$oxy)
+lines(mydat$bm[order(mydat$bm)],gammafit$fitted.values[order(mydat$bm)])
+
+```
+
+
+###  Part 2
+#Question 1
+```{r}
+
+Xmat <- cbind(1, (1:50)/50)
+b<-c(-0.5,2)
+mydat<-rbinom(50,1,prob = 1-exp(-exp((Xmat)%*%b)))
+Xmat<-data.frame(Xmat)
+plot(Xmat$X2,mydat)
+```
+
+
+
+#Question 2
+```{r}
+fit<-glm(mydat~Xmat$X2,family = binomial(link = "cloglog"))
+summary(fit)
+
+int <- cbind( summary(fit)$coefficients[,c(1)] - 1.96*summary(fit)$coefficients[,c(2)] ,
+summary(fit)$coefficients[,c(1)] +1.96*summary(fit)$coefficients[,c(2)])
+int
+
+#scaled
+summary(fit)$deviance/summary(fit)$dispersion
+#unscaled
+summary(fit)$deviance
+
+ests<-predict(fit,se.fit = TRUE,type = "response")
+bhat<-as.numeric(coef(fit))
+Xmat <- cbind(1, (1:50)/50)
+phat = 1-exp(-exp((Xmat)%*%bhat))
+likeli<-t(log(phat))%*%mydat+t(log(1-phat))%*%(1-mydat)
+likeli
+
+Xmat <- cbind(1, (1:50)/50)
+prob = 1-exp(-exp((Xmat)%*%b))
+Xmat<-data.frame(Xmat)
+plot(Xmat$X2,mydat)
+lines(Xmat$X2[order(Xmat$X2)],ests$fit[order(Xmat$X2)])
+lines(Xmat$X2,prob,lty=2)
+```
+
+
+#Question 3
+```{r}
+ests<-predict(fit,se.fit = TRUE,type = "response")
+lower<-ests$fit-1.96*ests$se.fit
+upper<-ests$fit+1.96*ests$se.fit
+
+Xmat<-data.frame(Xmat)
+plot(Xmat$X2,mydat)
+lines(Xmat$X2[order(Xmat$X2)],ests$fit[order(Xmat$X2)])
+lines(Xmat$X2[order(Xmat$X2)],lower[order(Xmat$X2)],lty=2)
+lines(Xmat$X2[order(Xmat$X2)],upper[order(Xmat$X2)],lty=2)
+```
+
+
+
+### part 3
+```{r}
+data<-read.csv("CloudData.csv")
+data1<-data.frame(matrix(data=c(data$UnseededRain,data$SeededRain),ncol = 1))
+colnames(data1)<-"Rain"
+data1$seed<-c(rep(0,26),rep(1,26))
+glmfit <- glm(data1$Rain~as.factor(data1$seed)-1,family = Gamma(link = "identity"))
+summary(glmfit)
+
+intglm <- cbind(summary(glmfit)$coefficients[,c(1)]-1.96*summary(glmfit)$coefficients[,c(2)],summary(glmfit)$coefficients[,c(1)] +1.96*summary(glmfit)$coefficients[,c(2)])
+intglm
+
+```
+
+
+
+
+
+
+
+
